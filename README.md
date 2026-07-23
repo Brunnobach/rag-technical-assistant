@@ -6,9 +6,11 @@ Built for **Solutions Architect / Applied AI** portfolios targeting the DACH mar
 
 ---
 
-## 🌐 Live Portfolio
+## Live portfolio & desk UI
 
-🌐 **Landing page:** https://brunnobach.github.io/rag-technical-assistant/
+**Interactive desk:** https://brunnobach.github.io/rag-technical-assistant/
+
+The GitHub Pages app is a Portuguese document Q&A desk. Offline it uses an embedded demo corpus with lexical retrieval. With the local API running, connect to `http://localhost:8000` to upload PDFs and query via `/upload` and `/query`.
 
 ---
 
@@ -23,7 +25,7 @@ Built for **Solutions Architect / Applied AI** portfolios targeting the DACH mar
 | **Containerization** | Dockerfile + Docker Compose for reproducible deployments |
 | **Testing** | pytest suite covering upload, query, citations, and health |
 | **CI/CD** | GitHub Actions: lint, tests, Docker build, GitHub Pages deploy |
-| **Portfolio** | Attractive GitHub Pages landing page for demo visibility |
+| **Portfolio** | Interactive GitHub Pages desk UI (demo corpus + live API mode) |
 
 ---
 
@@ -70,7 +72,7 @@ rag-technical-assistant/
 ├── Dockerfile
 ├── requirements.txt
 ├── .github/workflows/ci.yml
-├── index.html              # GitHub Pages landing page
+├── index.html              # Interactive desk UI (GitHub Pages)
 ├── _config.yml             # Jekyll config for GitHub Pages
 └── README.md
 ```
