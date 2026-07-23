@@ -1,245 +1,885 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Technical Assistant | Brunno Bachmann</title>
-    <meta name="description" content="Open-source RAG assistant for technical documents. Upload PDFs, ask questions, get cited answers with FastAPI, ChromaDB and sentence-transformers.">
+    <title>RAG Desk | Brunno Bachmann</title>
+    <meta name="description" content="Assistente RAG para documentos técnicos — upload, perguntas e respostas com citações.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0ea5e9;
-            --accent: #6366f1;
-            --dark: #0f172a;
-            --light: #f8fafc;
-            --text: #1e293b;
-            --muted: #64748b;
-            --success: #22c55e;
-            --card: #ffffff;
+            --paper: #fafaf8;
+            --ink: #171717;
+            --muted: #525252;
+            --line: #e5e5e0;
+            --panel: #ffffff;
+            --teal: #0f766e;
+            --teal-soft: #ecf7f5;
+            --warn: #92400e;
+            --warn-bg: #fff7ed;
+            --danger: #9f1239;
+            --font: 'Manrope', system-ui, sans-serif;
+            --serif: 'Source Serif 4', Georgia, serif;
         }
-        * { box-sizing: border-box; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            margin: 0;
-            background: var(--light);
-            color: var(--text);
-            line-height: 1.6;
+            font-family: var(--font);
+            background: var(--paper);
+            color: var(--ink);
+            min-height: 100vh;
+            line-height: 1.5;
         }
-        a { color: var(--primary); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        header {
-            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
-            color: white;
-            padding: 5rem 2rem 4rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
+
+        .app {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        header::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(14,165,233,0.18) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 70%, rgba(99,102,241,0.15) 0%, transparent 40%);
-            pointer-events: none;
+
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 0.85rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--line);
+            background: var(--panel);
+            animation: rise 0.35s ease-out;
         }
-        header .wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; }
-        header h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -0.02em; }
-        header p { max-width: 650px; margin: 1.25rem auto 0; font-size: 1.15rem; opacity: 0.85; }
-        .badges { margin-top: 1.5rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: white;
-            padding: 0.35rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.82rem;
-            font-weight: 500;
-            backdrop-filter: blur(4px);
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--primary);
-            color: white;
-            padding: 0.85rem 1.6rem;
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            box-shadow: 0 4px 14px rgba(14,165,233,0.35);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(14,165,233,0.45); text-decoration: none; }
-        .btn.secondary { background: white; color: var(--dark); box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
-        .btn.secondary:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.12); }
-        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
-        .section {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
-            border: 1px solid rgba(0,0,0,0.04);
-        }
-        .section h2 { margin-top: 0; color: var(--dark); font-size: 1.5rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-        .card {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.25rem;
-            border: 1px solid rgba(0,0,0,0.04);
-        }
-        .card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--dark); }
-        .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
-        .feature-list { list-style: none; padding: 0; margin: 0; }
-        .feature-list li {
-            padding: 0.6rem 0 0.6rem 1.8rem;
-            position: relative;
-            border-bottom: 1px solid rgba(0,0,0,0.04);
-        }
-        .feature-list li:last-child { border-bottom: none; }
-        .feature-list li::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: var(--success);
+
+        .brand h1 {
+            font-size: clamp(1.35rem, 3vw, 1.7rem);
             font-weight: 700;
+            letter-spacing: -0.03em;
+            color: var(--ink);
         }
-        .architecture {
-            background: #0f172a;
-            color: #e2e8f0;
-            border-radius: 14px;
-            padding: 1.5rem;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            font-size: 0.92rem;
-            line-height: 1.8;
-            overflow-x: auto;
+
+        .brand p {
+            font-size: 0.88rem;
+            color: var(--muted);
+            margin-top: 0.15rem;
         }
-        .architecture .step {
-            display: inline-flex;
+
+        .status-row {
+            display: flex;
+            flex-wrap: wrap;
             align-items: center;
+            gap: 0.45rem;
+        }
+
+        .mode-chip {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.3rem 0.55rem;
+            border: 1px solid var(--line);
+            background: var(--paper);
+            color: var(--muted);
+        }
+
+        .mode-chip.demo { color: var(--warn); background: var(--warn-bg); border-color: #fdba74; }
+        .mode-chip.api { color: var(--teal); background: var(--teal-soft); border-color: #99d5cf; }
+
+        .api-config {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .api-config input {
+            font-family: var(--font);
+            font-size: 0.78rem;
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--line);
+            width: min(210px, 40vw);
+            background: var(--paper);
+        }
+
+        .api-config input:focus {
+            outline: 2px solid rgba(15, 118, 110, 0.35);
+            border-color: var(--teal);
+        }
+
+        .api-config button,
+        .btn {
+            font-family: var(--font);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.35rem 0.65rem;
+            border: 1px solid var(--teal);
+            background: var(--teal);
+            color: white;
+            cursor: pointer;
+        }
+
+        .btn.ghost {
+            background: transparent;
+            color: var(--teal);
+        }
+
+        .btn:hover,
+        .api-config button:hover { filter: brightness(0.95); }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 0;
+            animation: rise 0.45s ease-out 0.05s both;
+        }
+
+        @media (max-width: 860px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--line);
+            background: var(--panel);
+            padding: 1rem 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 0;
+        }
+
+        @media (max-width: 860px) {
+            .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
+        }
+
+        .sidebar h2 {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+        }
+
+        .upload-zone {
+            border: 1px dashed #c4c4bc;
+            background: var(--paper);
+            padding: 0.9rem;
+            text-align: center;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .upload-zone.drag {
+            border-color: var(--teal);
+            background: var(--teal-soft);
+        }
+
+        .upload-zone p {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 0.55rem;
+        }
+
+        .upload-zone input[type="file"] { display: none; }
+
+        .doc-stats {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .doc-stats strong { color: var(--ink); font-weight: 600; }
+
+        .doc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            overflow-y: auto;
+            max-height: 280px;
+            flex: 1;
+        }
+
+        .doc-list li {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.6rem;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
             gap: 0.5rem;
+            align-items: baseline;
+        }
+
+        .doc-list .name {
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .doc-list .meta {
+            font-size: 0.72rem;
+            color: var(--muted);
             white-space: nowrap;
         }
-        .arrow { color: var(--primary); font-weight: bold; }
-        pre {
-            background: #1e293b;
-            color: #e2e8f0;
-            padding: 1.25rem;
-            border-radius: 12px;
-            overflow-x: auto;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            font-size: 0.9rem;
+
+        .empty-docs {
+            font-size: 0.85rem;
+            color: var(--muted);
+            padding: 0.5rem 0;
         }
-        pre code { background: transparent; padding: 0; color: inherit; }
-        .cta { text-align: center; padding: 2rem 0; }
-        footer { text-align: center; padding: 2.5rem 2rem; color: var(--muted); font-size: 0.9rem; }
-        @media (max-width: 600px) {
-            .container { padding: 1rem; }
-            .section { padding: 1.25rem; }
-            header { padding: 3.5rem 1rem 3rem; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .chat {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background: var(--paper);
+        }
+
+        .thread {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.15rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 360px;
+        }
+
+        .empty-state {
+            margin: auto;
+            max-width: 28rem;
+            text-align: left;
+            padding: 1rem 0;
+        }
+
+        .empty-state h3 {
+            font-family: var(--serif);
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.02em;
+        }
+
+        .empty-state p {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .suggestions button {
+            text-align: left;
+            font-family: var(--font);
+            font-size: 0.88rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--ink);
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .suggestions button:hover {
+            border-color: var(--teal);
+            background: var(--teal-soft);
+        }
+
+        .msg {
+            max-width: 44rem;
+            animation: rise 0.28s ease-out;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: var(--teal-soft);
+            border: 1px solid #b7ddd8;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .msg.assistant {
+            align-self: stretch;
+        }
+
+        .msg.assistant .answer {
+            font-family: var(--serif);
+            font-size: 1.05rem;
+            line-height: 1.65;
+            color: var(--ink);
+            white-space: pre-wrap;
+        }
+
+        .sources {
+            margin-top: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .sources-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+        }
+
+        .source {
+            border-left: 2px solid var(--teal);
+            padding: 0.45rem 0.7rem;
+            background: var(--panel);
+            border-top: 1px solid var(--line);
+            border-right: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            font-size: 0.82rem;
+        }
+
+        .source .meta {
+            color: var(--teal);
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .source .excerpt {
+            color: var(--muted);
+            font-family: var(--serif);
+            line-height: 1.45;
+        }
+
+        .composer {
+            border-top: 1px solid var(--line);
+            background: var(--panel);
+            padding: 0.85rem 1.25rem 1.1rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .composer textarea {
+            flex: 1;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--line);
+            background: var(--paper);
+            resize: none;
+            min-height: 48px;
+            max-height: 140px;
+            line-height: 1.4;
+        }
+
+        .composer textarea:focus {
+            outline: 2px solid rgba(15, 118, 110, 0.3);
+            border-color: var(--teal);
+        }
+
+        .composer button[type="submit"] {
+            font-family: var(--font);
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 0.7rem 1.1rem;
+            border: none;
+            background: var(--ink);
+            color: white;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .composer button[type="submit"]:hover { background: #333; }
+        .composer button[type="submit"]:disabled { opacity: 0.5; cursor: wait; }
+
+        .toast {
+            display: none;
+            margin: 0 1.25rem 0.75rem;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.85rem;
+            border: 1px solid #fda4af;
+            background: #fff1f2;
+            color: var(--danger);
+        }
+
+        .toast.visible { display: block; }
+
+        footer {
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid var(--line);
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            background: var(--panel);
+        }
+
+        footer a {
+            color: var(--teal);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="wrap">
-            <h1>🤖 RAG Technical Assistant</h1>
-            <p>Upload technical PDFs, ask domain-specific questions, and get grounded answers with cited sources. Built for production with FastAPI, ChromaDB and open-source embeddings.</p>
-            <div class="badges">
-                <span class="badge">RAG</span>
-                <span class="badge">FastAPI</span>
-                <span class="badge">ChromaDB</span>
-                <span class="badge">Sentence Transformers</span>
-                <span class="badge">Docker</span>
-                <span class="badge">CI/CD</span>
+    <div class="app">
+        <header class="topbar">
+            <div class="brand">
+                <h1>RAG Desk</h1>
+                <p>Pergunte sobre documentos técnicos e receba respostas com fontes.</p>
             </div>
-            <a href="https://github.com/Brunnobach/rag-technical-assistant" class="btn">View on GitHub</a>
-            <a href="#quickstart" class="btn secondary">Quick Start</a>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="section">
-            <h2>What this project demonstrates</h2>
-            <p>This is a complete, production-oriented RAG pipeline designed for Solutions Architect and Applied AI portfolios. It shows how to turn static technical documents into a queryable knowledge base without relying on proprietary APIs.</p>
-            <div class="grid">
-                <div class="card">
-                    <h3>📄 PDF Ingestion</h3>
-                    <p>Upload PDFs via REST API; text is extracted, chunked and embedded automatically.</p>
-                </div>
-                <div class="card">
-                    <h3>🔍 Semantic Search</h3>
-                    <p>sentence-transformers power dense retrieval against a persistent ChromaDB collection.</p>
-                </div>
-                <div class="card">
-                    <h3>✅ Cited Answers</h3>
-                    <p>Every answer includes the source document, chunk index, page and similarity score.</p>
-                </div>
-                <div class="card">
-                    <h3>🐳 Cloud Ready</h3>
-                    <p>Containerized with Docker Compose and automated tests in GitHub Actions.</p>
+            <div class="status-row">
+                <span class="mode-chip demo" id="mode-chip">Modo demo</span>
+                <div class="api-config">
+                    <input type="url" id="api-base" aria-label="URL da API" placeholder="http://localhost:8000">
+                    <button type="button" id="btn-check-api">Conectar</button>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="section">
-            <h2>Architecture</h2>
-            <div class="architecture">
-                <div class="step">
-                    PDF Upload <span class="arrow">→</span> Text Extraction <span class="arrow">→</span> Chunking <span class="arrow">→</span> Embeddings <span class="arrow">→</span> ChromaDB <span class="arrow">→</span> Query <span class="arrow">→</span> Retrieved Context <span class="arrow">→</span> Answer + Citations
+        <div class="workspace">
+            <aside class="sidebar">
+                <div>
+                    <h2>Documentos</h2>
+                    <p class="doc-stats" id="doc-stats"><strong>0</strong> documentos · <strong>0</strong> trechos</p>
                 </div>
-            </div>
+
+                <div class="upload-zone" id="upload-zone">
+                    <p>Arraste um PDF ou selecione um arquivo</p>
+                    <button type="button" class="btn" id="btn-pick">Escolher PDF</button>
+                    <input type="file" id="file-input" accept=".pdf,application/pdf">
+                </div>
+
+                <ul class="doc-list" id="doc-list">
+                    <li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>
+                </ul>
+
+                <div class="sidebar-actions">
+                    <button type="button" class="btn ghost" id="btn-reset">Limpar base</button>
+                </div>
+            </aside>
+
+            <main class="chat">
+                <div class="toast" id="toast" role="alert"></div>
+                <div class="thread" id="thread">
+                    <div class="empty-state" id="empty-state">
+                        <h3>Mesa de leitura pronta</h3>
+                        <p>No modo demo há um corpus embutido. Com a API local, faça upload de PDFs reais e consulte com citações.</p>
+                        <div class="suggestions" id="suggestions"></div>
+                    </div>
+                </div>
+                <form class="composer" id="ask-form">
+                    <textarea id="question" rows="2" placeholder="Faça uma pergunta sobre os documentos…" required></textarea>
+                    <button type="submit" id="btn-ask">Perguntar</button>
+                </form>
+            </main>
         </div>
 
-        <div class="section">
-            <h2>Key Features</h2>
-            <ul class="feature-list">
-                <li>FastAPI endpoints: <code>/upload</code>, <code>/query</code>, <code>/health</code>, <code>/reset</code></li>
-                <li>Chunked embeddings with configurable size and overlap</li>
-                <li>Vector storage backed by ChromaDB, running as a Docker service</li>
-                <li>No OpenAI API key required; uses open-source sentence-transformers</li>
-                <li>Deterministic fallback answer generation plus optional local LLM support</li>
-                <li>Comprehensive pytest suite and GitHub Actions CI/CD</li>
-                <li>GitHub Pages landing page for portfolio demos</li>
-            </ul>
-        </div>
-
-        <div class="section" id="quickstart">
-            <h2>Quick Start</h2>
-            <pre><code>git clone https://github.com/Brunnobach/rag-technical-assistant.git
-cd rag-technical-assistant
-
-# Run with Docker Compose
-docker compose up --build
-
-# Upload a PDF and query via curl
-curl -X POST -F "file=@document.pdf" http://localhost:8000/upload
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question":"What does this document say?"}'</code></pre>
-        </div>
-
-        <div class="section">
-            <h2>About the author</h2>
-            <p>Built by <strong>Brunno Bachmann</strong> — a CTO and engineering leader with 6+ years in renewable energy, now building production RAG and Applied AI systems for technical domains.</p>
-            <p>
-                <a href="https://www.linkedin.com/in/brunno-bachmann-865429173">LinkedIn</a> ·
-                <a href="https://github.com/Brunnobach">GitHub</a>
-            </p>
-        </div>
-
-        <div class="cta">
-            <a href="https://github.com/Brunnobach/rag-technical-assistant" class="btn">Explore the Code</a>
-        </div>
+        <footer>
+            <span>Brunno Bachmann · RAG Technical Assistant</span>
+            <span>
+                <a href="https://github.com/Brunnobach/rag-technical-assistant" target="_blank" rel="noopener">GitHub</a>
+                ·
+                <a href="https://www.linkedin.com/in/brunno-bachmann-865429173" target="_blank" rel="noopener">LinkedIn</a>
+            </span>
+        </footer>
     </div>
 
-    <footer>
-        <p>© 2026 Brunno Bachmann · <a href="https://github.com/Brunnobach/rag-technical-assistant">GitHub Repository</a></p>
-    </footer>
+    <script>
+        const STORAGE_KEY = 'rag_api_base';
+
+        const DEMO_DOCS = [
+            {
+                id: 'demo-biogas',
+                name: 'guia-biodigestor.md',
+                chunks: [
+                    { page: 1, text: 'A digestão anaeróbia mesofílica opera tipicamente entre 35 e 40 °C. Desvios prolongados abaixo de 32 °C reduzem a atividade metanogênica e a produção diária de biogás.' },
+                    { page: 2, text: 'O pH ótimo do digestor fica entre 6.8 e 7.5. Valores abaixo de 6.5 indicam acidificação e exigem redução da carga orgânica até estabilização.' },
+                    { page: 3, text: 'A carga orgânica volumétrica costuma situar-se entre 2 e 5 kg VS/m³/dia em plantas estáveis. Sobrecarga provoca acúmulo de ácidos voláteis.' }
+                ]
+            },
+            {
+                id: 'demo-iot',
+                name: 'telemetria-industrial.md',
+                chunks: [
+                    { page: 1, text: 'Sensores industriais publicam telemetria via MQTT. O broker Mosquitto encaminha mensagens para serviços de ingestão que gravam séries temporais no InfluxDB.' },
+                    { page: 2, text: 'Alertas de limiar avaliam temperatura, pressão e pH em tempo quase real. Quando um valor ultrapassa o limite configurado, o painel marca o sensor em estado de alerta.' },
+                    { page: 3, text: 'WebSockets na porta 9001 permitem que dashboards no browser assinem tópicos factory/sensors/# sem polling contínuo.' }
+                ]
+            },
+            {
+                id: 'demo-mlops',
+                name: 'pipeline-mlops.md',
+                chunks: [
+                    { page: 1, text: 'Um pipeline MLOps de previsão registra experimentos no MLflow, versiona o modelo e expõe inferência por uma API FastAPI containerizada.' },
+                    { page: 2, text: 'Features de retenção hidráulica, substrato e produção do dia anterior melhoram o Gradient Boosting para produção de biogás em m³/dia.' },
+                    { page: 3, text: 'CI/CD com GitHub Actions executa testes, treina o modelo e publica artefatos. O healthcheck da API reporta se o modelo está carregado.' }
+                ]
+            }
+        ];
+
+        const SUGGESTIONS = [
+            'Qual faixa de temperatura favorece a digestão mesofílica?',
+            'Como o MQTT se integra ao InfluxDB nesta arquitetura?',
+            'O que o pipeline MLOps registra no MLflow?'
+        ];
+
+        let apiOnline = false;
+        let demoDocs = structuredClone(DEMO_DOCS);
+        let remoteStats = { indexed_documents: 0, chunk_count: 0 };
+        let remoteDocs = [];
+
+        const els = {
+            modeChip: document.getElementById('mode-chip'),
+            apiBase: document.getElementById('api-base'),
+            btnCheck: document.getElementById('btn-check-api'),
+            docStats: document.getElementById('doc-stats'),
+            docList: document.getElementById('doc-list'),
+            uploadZone: document.getElementById('upload-zone'),
+            fileInput: document.getElementById('file-input'),
+            btnPick: document.getElementById('btn-pick'),
+            btnReset: document.getElementById('btn-reset'),
+            thread: document.getElementById('thread'),
+            emptyState: document.getElementById('empty-state'),
+            suggestions: document.getElementById('suggestions'),
+            askForm: document.getElementById('ask-form'),
+            question: document.getElementById('question'),
+            btnAsk: document.getElementById('btn-ask'),
+            toast: document.getElementById('toast')
+        };
+
+        function getApiBase() {
+            return (els.apiBase.value || 'http://localhost:8000').replace(/\/$/, '');
+        }
+
+        function showToast(msg) {
+            if (!msg) {
+                els.toast.classList.remove('visible');
+                els.toast.textContent = '';
+                return;
+            }
+            els.toast.textContent = msg;
+            els.toast.classList.add('visible');
+        }
+
+        function setModeUI() {
+            if (apiOnline) {
+                els.modeChip.textContent = 'API conectada';
+                els.modeChip.className = 'mode-chip api';
+            } else {
+                els.modeChip.textContent = 'Modo demo';
+                els.modeChip.className = 'mode-chip demo';
+            }
+        }
+
+        function tokenize(text) {
+            return text
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .split(/[^a-z0-9áéíóúãõâêôç]+/i)
+                .filter(t => t.length > 2);
+        }
+
+        function demoRetrieve(question, topK = 4) {
+            const qTokens = new Set(tokenize(question));
+            const scored = [];
+            demoDocs.forEach(doc => {
+                doc.chunks.forEach((chunk, idx) => {
+                    const cTokens = tokenize(chunk.text);
+                    let overlap = 0;
+                    cTokens.forEach(t => { if (qTokens.has(t)) overlap += 1; });
+                    const score = overlap / Math.max(qTokens.size, 1);
+                    if (score > 0) {
+                        scored.push({
+                            document: doc.name,
+                            chunk_index: idx,
+                            page: chunk.page,
+                            text: chunk.text,
+                            score: Math.round(score * 1000) / 1000
+                        });
+                    }
+                });
+            });
+            scored.sort((a, b) => b.score - a.score);
+            return scored.slice(0, topK);
+        }
+
+        function demoAnswer(question, sources) {
+            if (!sources.length) {
+                return {
+                    answer: 'Não encontrei trechos relevantes no corpus demo. Tente outra formulação ou conecte a API com PDFs indexados.',
+                    sources: []
+                };
+            }
+            const passages = sources.map((s, i) => `[${i + 1}] (${s.document}, p.${s.page}) ${s.text}`).join('\n\n');
+            return {
+                answer: `Com base nos trechos recuperados:\n\n${passages}\n\nSíntese: os documentos indicam que a resposta à pergunta “${question}” está ancorada nas passagens acima.`,
+                sources
+            };
+        }
+
+        function renderDocs() {
+            if (apiOnline) {
+                const nDocs = remoteStats.indexed_documents || remoteDocs.length;
+                const nChunks = remoteStats.chunk_count || 0;
+                els.docStats.innerHTML = `<strong>${nDocs}</strong> documentos · <strong>${nChunks}</strong> trechos`;
+                if (!remoteDocs.length && nDocs === 0) {
+                    els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>';
+                    return;
+                }
+                if (remoteDocs.length) {
+                    els.docList.innerHTML = remoteDocs.map(d =>
+                        `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks} trechos</span></li>`
+                    ).join('');
+                } else {
+                    els.docList.innerHTML = `<li><span class="name">Coleção remota</span><span class="meta">${nChunks} trechos</span></li>`;
+                }
+                return;
+            }
+
+            const nChunks = demoDocs.reduce((acc, d) => acc + d.chunks.length, 0);
+            els.docStats.innerHTML = `<strong>${demoDocs.length}</strong> documentos · <strong>${nChunks}</strong> trechos`;
+            if (!demoDocs.length) {
+                els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>';
+                return;
+            }
+            els.docList.innerHTML = demoDocs.map(d =>
+                `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks.length} trechos</span></li>`
+            ).join('');
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function clearEmptyState() {
+            if (els.emptyState) {
+                els.emptyState.remove();
+            }
+        }
+
+        function appendMessage(role, content, sources) {
+            clearEmptyState();
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            if (role === 'user') {
+                div.textContent = content;
+            } else {
+                const answer = document.createElement('div');
+                answer.className = 'answer';
+                answer.textContent = content;
+                div.appendChild(answer);
+                if (sources && sources.length) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'sources';
+                    wrap.innerHTML = '<div class="sources-label">Fontes</div>';
+                    sources.forEach(s => {
+                        const item = document.createElement('div');
+                        item.className = 'source';
+                        const page = s.page != null ? `, p.${s.page}` : '';
+                        const score = typeof s.score === 'number' ? ` · score ${s.score}` : '';
+                        item.innerHTML = `<div class="meta">${escapeHtml(s.document)}${page}${score}</div><div class="excerpt">${escapeHtml(s.text)}</div>`;
+                        wrap.appendChild(item);
+                    });
+                    div.appendChild(wrap);
+                }
+            }
+            els.thread.appendChild(div);
+            els.thread.scrollTop = els.thread.scrollHeight;
+        }
+
+        async function checkApi() {
+            const base = getApiBase();
+            localStorage.setItem(STORAGE_KEY, base);
+            try {
+                const res = await fetch(`${base}/health`, { signal: AbortSignal.timeout(2500) });
+                if (!res.ok) throw new Error('health failed');
+                const data = await res.json();
+                apiOnline = true;
+                remoteStats = {
+                    indexed_documents: data.indexed_documents || 0,
+                    chunk_count: data.chunk_count || 0
+                };
+                setModeUI();
+                renderDocs();
+                showToast('');
+            } catch {
+                apiOnline = false;
+                setModeUI();
+                renderDocs();
+            }
+        }
+
+        async function uploadPdf(file) {
+            if (!file) return;
+            showToast('');
+            if (!apiOnline) {
+                showToast('Upload de PDF requer a API local. No modo demo o corpus embutido já está disponível.');
+                return;
+            }
+            const form = new FormData();
+            form.append('file', file);
+            els.btnPick.disabled = true;
+            try {
+                const res = await fetch(`${getApiBase()}/upload`, {
+                    method: 'POST',
+                    body: form,
+                    signal: AbortSignal.timeout(120000)
+                });
+                if (!res.ok) {
+                    const detail = await res.json().catch(() => ({}));
+                    throw new Error(detail.detail || `Erro HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                remoteDocs = remoteDocs.filter(d => d.name !== data.filename);
+                remoteDocs.push({ name: data.filename || data.document, chunks: data.chunks_indexed || 0 });
+                await checkApi();
+            } catch (err) {
+                showToast(err.message || 'Falha no upload.');
+            } finally {
+                els.btnPick.disabled = false;
+                els.fileInput.value = '';
+            }
+        }
+
+        async function resetKnowledge() {
+            showToast('');
+            if (apiOnline) {
+                try {
+                    const res = await fetch(`${getApiBase()}/reset`, {
+                        method: 'POST',
+                        signal: AbortSignal.timeout(10000)
+                    });
+                    if (!res.ok) throw new Error('Falha ao limpar a base remota.');
+                    remoteDocs = [];
+                    remoteStats = { indexed_documents: 0, chunk_count: 0 };
+                } catch (err) {
+                    showToast(err.message);
+                    return;
+                }
+            } else {
+                demoDocs = [];
+            }
+            renderDocs();
+        }
+
+        async function ask(question) {
+            showToast('');
+            appendMessage('user', question);
+            els.btnAsk.disabled = true;
+            try {
+                let result;
+                if (apiOnline) {
+                    try {
+                        const res = await fetch(`${getApiBase()}/query`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question }),
+                            signal: AbortSignal.timeout(60000)
+                        });
+                        if (!res.ok) {
+                            const detail = await res.json().catch(() => ({}));
+                            throw new Error(detail.detail || `Erro HTTP ${res.status}`);
+                        }
+                        result = await res.json();
+                    } catch (err) {
+                        apiOnline = false;
+                        setModeUI();
+                        const sources = demoRetrieve(question);
+                        result = demoAnswer(question, sources);
+                        showToast(`API indisponível (${err.message}). Usando corpus demo.`);
+                    }
+                } else {
+                    const sources = demoRetrieve(question);
+                    result = demoAnswer(question, sources);
+                }
+                appendMessage('assistant', result.answer, result.sources || []);
+            } catch (err) {
+                showToast(err.message || 'Falha na consulta.');
+            } finally {
+                els.btnAsk.disabled = false;
+            }
+        }
+
+        // Events
+        els.btnCheck.addEventListener('click', () => checkApi());
+        els.btnPick.addEventListener('click', () => els.fileInput.click());
+        els.fileInput.addEventListener('change', () => uploadPdf(els.fileInput.files[0]));
+        els.btnReset.addEventListener('click', () => {
+            if (confirm('Limpar a base de documentos?')) resetKnowledge();
+        });
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            els.uploadZone.addEventListener(evt, e => {
+                e.preventDefault();
+                els.uploadZone.classList.add('drag');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            els.uploadZone.addEventListener(evt, e => {
+                e.preventDefault();
+                els.uploadZone.classList.remove('drag');
+            });
+        });
+        els.uploadZone.addEventListener('drop', e => {
+            const file = e.dataTransfer.files[0];
+            if (file) uploadPdf(file);
+        });
+
+        els.askForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const q = els.question.value.trim();
+            if (q.length < 3) return;
+            els.question.value = '';
+            ask(q);
+        });
+
+        els.question.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                els.askForm.requestSubmit();
+            }
+        });
+
+        // Init
+        els.apiBase.value = localStorage.getItem(STORAGE_KEY) || 'http://localhost:8000';
+        SUGGESTIONS.forEach(text => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = text;
+            btn.addEventListener('click', () => ask(text));
+            els.suggestions.appendChild(btn);
+        });
+        setModeUI();
+        renderDocs();
+        checkApi();
+    </script>
 </body>
 </html>
