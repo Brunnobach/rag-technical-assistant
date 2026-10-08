@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Desk | Brunno Bachmann</title>
-    <meta name="description" content="Assistente RAG para documentos técnicos — upload, perguntas e respostas com citações.">
+    <title>RAG Desk | Technical document Q&amp;A</title>
+    <meta name="description" content="RAG assistant for technical documents — upload PDFs, ask questions, get answers assembled from cited passages.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
@@ -448,13 +448,13 @@
         <header class="topbar">
             <div class="brand">
                 <h1>RAG Desk</h1>
-                <p>Pergunte sobre documentos técnicos e receba respostas com fontes.</p>
+                <p>Ask questions about technical documents and get answers with cited sources.</p>
             </div>
             <div class="status-row">
-                <span class="mode-chip demo" id="mode-chip">Modo demo</span>
+                <span class="mode-chip demo" id="mode-chip">Demo mode</span>
                 <div class="api-config">
-                    <input type="url" id="api-base" aria-label="URL da API" placeholder="http://localhost:8000">
-                    <button type="button" id="btn-check-api">Conectar</button>
+                    <input type="url" id="api-base" aria-label="API URL" placeholder="http://localhost:8000">
+                    <button type="button" id="btn-check-api">Connect</button>
                 </div>
             </div>
         </header>
@@ -462,22 +462,22 @@
         <div class="workspace">
             <aside class="sidebar">
                 <div>
-                    <h2>Documentos</h2>
-                    <p class="doc-stats" id="doc-stats"><strong>0</strong> documentos · <strong>0</strong> trechos</p>
+                    <h2>Documents</h2>
+                    <p class="doc-stats" id="doc-stats"><strong>0</strong> documents · <strong>0</strong> passages</p>
                 </div>
 
                 <div class="upload-zone" id="upload-zone">
-                    <p>Arraste um PDF ou selecione um arquivo</p>
-                    <button type="button" class="btn" id="btn-pick">Escolher PDF</button>
+                    <p>Drop a PDF or choose a file</p>
+                    <button type="button" class="btn" id="btn-pick">Choose PDF</button>
                     <input type="file" id="file-input" accept=".pdf,application/pdf">
                 </div>
 
                 <ul class="doc-list" id="doc-list">
-                    <li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>
+                    <li class="empty-docs" style="border:none;background:transparent;padding:0;">No documents indexed.</li>
                 </ul>
 
                 <div class="sidebar-actions">
-                    <button type="button" class="btn ghost" id="btn-reset">Limpar base</button>
+                    <button type="button" class="btn ghost" id="btn-reset">Clear knowledge base</button>
                 </div>
             </aside>
 
@@ -485,14 +485,14 @@
                 <div class="toast" id="toast" role="alert"></div>
                 <div class="thread" id="thread">
                     <div class="empty-state" id="empty-state">
-                        <h3>Mesa de leitura pronta</h3>
-                        <p>No modo demo há um corpus embutido. Com a API local, faça upload de PDFs reais e consulte com citações.</p>
+                        <h3>Reading desk ready</h3>
+                        <p>Demo mode uses an embedded corpus. With the local API, upload real PDFs and query with citations. Answers are assembled from retrieved passages unless you enable a local LLM.</p>
                         <div class="suggestions" id="suggestions"></div>
                     </div>
                 </div>
                 <form class="composer" id="ask-form">
-                    <textarea id="question" rows="2" placeholder="Faça uma pergunta sobre os documentos…" required></textarea>
-                    <button type="submit" id="btn-ask">Perguntar</button>
+                    <textarea id="question" rows="2" placeholder="Ask a question about the documents…" required></textarea>
+                    <button type="submit" id="btn-ask">Ask</button>
                 </form>
             </main>
         </div>
@@ -513,37 +513,37 @@
         const DEMO_DOCS = [
             {
                 id: 'demo-biogas',
-                name: 'guia-biodigestor.md',
+                name: 'anaerobic-digestion-notes.md',
                 chunks: [
-                    { page: 1, text: 'A digestão anaeróbia mesofílica opera tipicamente entre 35 e 40 °C. Desvios prolongados abaixo de 32 °C reduzem a atividade metanogênica e a produção diária de biogás.' },
-                    { page: 2, text: 'O pH ótimo do digestor fica entre 6.8 e 7.5. Valores abaixo de 6.5 indicam acidificação e exigem redução da carga orgânica até estabilização.' },
-                    { page: 3, text: 'A carga orgânica volumétrica costuma situar-se entre 2 e 5 kg VS/m³/dia em plantas estáveis. Sobrecarga provoca acúmulo de ácidos voláteis.' }
+                    { page: 1, text: 'Mesophilic anaerobic digestion typically operates between 35 and 40 °C. Prolonged drops below 32 °C reduce methanogenic activity and daily biogas yield.' },
+                    { page: 2, text: 'The digester pH optimum is 6.8 to 7.5. Values below 6.5 indicate acidification and require a reduced organic loading rate until the process restabilizes.' },
+                    { page: 3, text: 'Volumetric organic loading rates of 2 to 5 kg VS/m³/day are typical for stable plants. Overloading leads to volatile fatty acid accumulation.' }
                 ]
             },
             {
                 id: 'demo-iot',
-                name: 'telemetria-industrial.md',
+                name: 'industrial-telemetry.md',
                 chunks: [
-                    { page: 1, text: 'Sensores industriais publicam telemetria via MQTT. O broker Mosquitto encaminha mensagens para serviços de ingestão que gravam séries temporais no InfluxDB.' },
-                    { page: 2, text: 'Alertas de limiar avaliam temperatura, pressão e pH em tempo quase real. Quando um valor ultrapassa o limite configurado, o painel marca o sensor em estado de alerta.' },
-                    { page: 3, text: 'WebSockets na porta 9001 permitem que dashboards no browser assinem tópicos factory/sensors/# sem polling contínuo.' }
+                    { page: 1, text: 'Industrial sensors publish telemetry over MQTT. A Mosquitto broker forwards messages to ingestion services that write time series into InfluxDB.' },
+                    { page: 2, text: 'Threshold alerts evaluate temperature, pressure, and pH in near real time. When a value exceeds the configured limit, the dashboard marks the sensor in an alert state.' },
+                    { page: 3, text: 'WebSockets on port 9001 let browser dashboards subscribe to factory/sensors/# without continuous polling.' }
                 ]
             },
             {
                 id: 'demo-mlops',
-                name: 'pipeline-mlops.md',
+                name: 'mlops-pipeline.md',
                 chunks: [
-                    { page: 1, text: 'Um pipeline MLOps de previsão registra experimentos no MLflow, versiona o modelo e expõe inferência por uma API FastAPI containerizada.' },
-                    { page: 2, text: 'Features de retenção hidráulica, substrato e produção do dia anterior melhoram o Gradient Boosting para produção de biogás em m³/dia.' },
-                    { page: 3, text: 'CI/CD com GitHub Actions executa testes, treina o modelo e publica artefatos. O healthcheck da API reporta se o modelo está carregado.' }
+                    { page: 1, text: 'A forecasting MLOps pipeline logs experiments in MLflow, versions the model, and serves inference through a containerized FastAPI service.' },
+                    { page: 2, text: 'Hydraulic retention, feedstock mix, and previous-day production features improve Gradient Boosting forecasts of biogas in m³/day.' },
+                    { page: 3, text: 'CI/CD with GitHub Actions runs tests, trains the model, and publishes artifacts. The API health check reports whether the model is loaded.' }
                 ]
             }
         ];
 
         const SUGGESTIONS = [
-            'Qual faixa de temperatura favorece a digestão mesofílica?',
-            'Como o MQTT se integra ao InfluxDB nesta arquitetura?',
-            'O que o pipeline MLOps registra no MLflow?'
+            'What temperature range favors mesophilic digestion?',
+            'How does MQTT integrate with InfluxDB in this architecture?',
+            'What does the MLOps pipeline record in MLflow?'
         ];
 
         let apiOnline = false;
@@ -586,10 +586,10 @@
 
         function setModeUI() {
             if (apiOnline) {
-                els.modeChip.textContent = 'API conectada';
+                els.modeChip.textContent = 'API connected';
                 els.modeChip.className = 'mode-chip api';
             } else {
-                els.modeChip.textContent = 'Modo demo';
+                els.modeChip.textContent = 'Demo mode';
                 els.modeChip.className = 'mode-chip demo';
             }
         }
@@ -630,13 +630,13 @@
         function demoAnswer(question, sources) {
             if (!sources.length) {
                 return {
-                    answer: 'Não encontrei trechos relevantes no corpus demo. Tente outra formulação ou conecte a API com PDFs indexados.',
+                    answer: 'No relevant passages were found in the demo corpus. Try another wording, or connect the API with indexed PDFs.',
                     sources: []
                 };
             }
             const passages = sources.map((s, i) => `[${i + 1}] (${s.document}, p.${s.page}) ${s.text}`).join('\n\n');
             return {
-                answer: `Com base nos trechos recuperados:\n\n${passages}\n\nSíntese: os documentos indicam que a resposta à pergunta “${question}” está ancorada nas passagens acima.`,
+                answer: `Based on the retrieved passages (assembled, not generated by an LLM):\n\n${passages}\n\nThe documents indicate that the answer to “${question}” is grounded in the passages above.`,
                 sources
             };
         }
@@ -645,29 +645,29 @@
             if (apiOnline) {
                 const nDocs = remoteStats.indexed_documents || remoteDocs.length;
                 const nChunks = remoteStats.chunk_count || 0;
-                els.docStats.innerHTML = `<strong>${nDocs}</strong> documentos · <strong>${nChunks}</strong> trechos`;
+                els.docStats.innerHTML = `<strong>${nDocs}</strong> documents · <strong>${nChunks}</strong> passages`;
                 if (!remoteDocs.length && nDocs === 0) {
-                    els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>';
+                    els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">No documents indexed.</li>';
                     return;
                 }
                 if (remoteDocs.length) {
                     els.docList.innerHTML = remoteDocs.map(d =>
-                        `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks} trechos</span></li>`
+                        `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks} passages</span></li>`
                     ).join('');
                 } else {
-                    els.docList.innerHTML = `<li><span class="name">Coleção remota</span><span class="meta">${nChunks} trechos</span></li>`;
+                    els.docList.innerHTML = `<li><span class="name">Remote collection</span><span class="meta">${nChunks} passages</span></li>`;
                 }
                 return;
             }
 
             const nChunks = demoDocs.reduce((acc, d) => acc + d.chunks.length, 0);
-            els.docStats.innerHTML = `<strong>${demoDocs.length}</strong> documentos · <strong>${nChunks}</strong> trechos`;
+            els.docStats.innerHTML = `<strong>${demoDocs.length}</strong> documents · <strong>${nChunks}</strong> passages`;
             if (!demoDocs.length) {
-                els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">Nenhum documento indexado.</li>';
+                els.docList.innerHTML = '<li class="empty-docs" style="border:none;background:transparent;padding:0;">No documents indexed.</li>';
                 return;
             }
             els.docList.innerHTML = demoDocs.map(d =>
-                `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks.length} trechos</span></li>`
+                `<li><span class="name">${escapeHtml(d.name)}</span><span class="meta">${d.chunks.length} passages</span></li>`
             ).join('');
         }
 
@@ -699,7 +699,7 @@
                 if (sources && sources.length) {
                     const wrap = document.createElement('div');
                     wrap.className = 'sources';
-                    wrap.innerHTML = '<div class="sources-label">Fontes</div>';
+                    wrap.innerHTML = '<div class="sources-label">Sources</div>';
                     sources.forEach(s => {
                         const item = document.createElement('div');
                         item.className = 'source';
@@ -741,7 +741,7 @@
             if (!file) return;
             showToast('');
             if (!apiOnline) {
-                showToast('Upload de PDF requer a API local. No modo demo o corpus embutido já está disponível.');
+                showToast('PDF upload requires the local API. In demo mode the embedded corpus is already available.');
                 return;
             }
             const form = new FormData();
@@ -755,14 +755,14 @@
                 });
                 if (!res.ok) {
                     const detail = await res.json().catch(() => ({}));
-                    throw new Error(detail.detail || `Erro HTTP ${res.status}`);
+                    throw new Error(detail.detail || `HTTP ${res.status}`);
                 }
                 const data = await res.json();
                 remoteDocs = remoteDocs.filter(d => d.name !== data.filename);
                 remoteDocs.push({ name: data.filename || data.document, chunks: data.chunks_indexed || 0 });
                 await checkApi();
             } catch (err) {
-                showToast(err.message || 'Falha no upload.');
+                showToast(err.message || 'Upload failed.');
             } finally {
                 els.btnPick.disabled = false;
                 els.fileInput.value = '';
@@ -777,7 +777,7 @@
                         method: 'POST',
                         signal: AbortSignal.timeout(10000)
                     });
-                    if (!res.ok) throw new Error('Falha ao limpar a base remota.');
+                    if (!res.ok) throw new Error('Failed to clear the remote store.');
                     remoteDocs = [];
                     remoteStats = { indexed_documents: 0, chunk_count: 0 };
                 } catch (err) {
@@ -806,7 +806,7 @@
                         });
                         if (!res.ok) {
                             const detail = await res.json().catch(() => ({}));
-                            throw new Error(detail.detail || `Erro HTTP ${res.status}`);
+                            throw new Error(detail.detail || `HTTP ${res.status}`);
                         }
                         result = await res.json();
                     } catch (err) {
@@ -814,7 +814,7 @@
                         setModeUI();
                         const sources = demoRetrieve(question);
                         result = demoAnswer(question, sources);
-                        showToast(`API indisponível (${err.message}). Usando corpus demo.`);
+                        showToast(`API unavailable (${err.message}). Using the demo corpus.`);
                     }
                 } else {
                     const sources = demoRetrieve(question);
@@ -822,7 +822,7 @@
                 }
                 appendMessage('assistant', result.answer, result.sources || []);
             } catch (err) {
-                showToast(err.message || 'Falha na consulta.');
+                showToast(err.message || 'Query failed.');
             } finally {
                 els.btnAsk.disabled = false;
             }
@@ -833,7 +833,7 @@
         els.btnPick.addEventListener('click', () => els.fileInput.click());
         els.fileInput.addEventListener('change', () => uploadPdf(els.fileInput.files[0]));
         els.btnReset.addEventListener('click', () => {
-            if (confirm('Limpar a base de documentos?')) resetKnowledge();
+            if (confirm('Clear the document store?')) resetKnowledge();
         });
 
         ['dragenter', 'dragover'].forEach(evt => {

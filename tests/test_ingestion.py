@@ -1,11 +1,11 @@
 """Unit tests for the ingestion helpers."""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from rag_technical_assistant.ingestion import chunk_text, _extract_page
+from rag_technical_assistant.ingestion import _extract_page, chunk_text
 
 
 def test_chunk_text():

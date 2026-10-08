@@ -18,11 +18,16 @@ ENV/
 *.egg-info/
 dist/
 build/
+*.whl
 
-# Pytest
+# Pytest / coverage / linters
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.ruff_cache/
+.mypy_cache/
+.tox/
 
 # IDEs
 .vscode/
@@ -30,14 +35,17 @@ htmlcov/
 *.swp
 *.swo
 
-# Data and model caches
-data/chroma/
-data/documents/*.pdf
-data/models/
+# Data, models, and caches (ephemeral locally; not part of the repo)
+data/
 *.gguf
 *.bin
 *.pt
 *.pth
+.cache/
+huggingface/
+
+# Node (screenshot tooling only; not part of the app)
+node_modules/
 
 # OS files
 .DS_Store

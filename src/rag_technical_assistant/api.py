@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -19,9 +18,9 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from rag_technical_assistant.generation import AnswerGenerator
 from rag_technical_assistant.ingestion import ingest_file
 from rag_technical_assistant.retrieval import VectorStore
-from rag_technical_assistant.generation import AnswerGenerator
 
 logger = logging.getLogger("rag_api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
