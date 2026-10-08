@@ -10,8 +10,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from langchain_community.llms import HuggingFacePipeline, LlamaCpp
 
 logger = logging.getLogger(__name__)

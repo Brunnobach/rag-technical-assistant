@@ -1,14 +1,15 @@
-from fastapi.testclient import TestClient
-import pytest
-from fpdf import FPDF
 import io
 import os
 import sys
 
+import pytest
+from fastapi.testclient import TestClient
+from fpdf import FPDF
+
 # Ensure the src package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from rag_technical_assistant.api import app, lifespan
+from rag_technical_assistant.api import app
 
 
 @pytest.fixture(scope="module")

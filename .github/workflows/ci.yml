@@ -1,10 +1,18 @@
-name: CI/CD
+# Lint, tests, and image build. GitHub Pages is published from the main branch
+# by GitHub's built-in pages-build-deployment (source: branch / root). Do not
+# add actions/deploy-pages here: that action requires Pages source = GitHub
+# Actions plus environment: github-pages, which is not how this repo publishes
+# (and was failing CI while the site was already live).
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -27,33 +35,10 @@ jobs:
       - name: Lint with Ruff
         run: |
           pip install ruff
-          ruff check src tests || true
+          ruff check src tests
 
       - name: Run pytest
         run: pytest --tb=short -q
 
       - name: Build Docker image
         run: docker build -t rag-technical-assistant:test .
-
-  pages:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4

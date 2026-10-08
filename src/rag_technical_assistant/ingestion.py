@@ -55,7 +55,7 @@ def chunk_text(text: str, chunk_size: int = 500, chunk_overlap: int = 100) -> li
 
 def ingest_file(
     file_path: Path,
-    vector_store: "VectorStore",
+    vector_store: VectorStore,
     chunk_size: int = 500,
     chunk_overlap: int = 100,
 ) -> list[dict]:
